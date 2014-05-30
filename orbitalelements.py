@@ -10,49 +10,66 @@ twopi = 2.0*pi
 
 class orbitalElements(object):
     """Set of orbital elements"""
-    def __init__(self,a, e, i, longascend, argper, trueanom):
+    def __init__(self,a, e, i, longascend, argper, trueanom, position,velocity, G, totalMass):
         self.a = a
         self.e = e 
+        self.rper = self.a*(1.0-e)
         self.i = i 
         self.longascend = longascend 
         self.argper = argper 
         self.trueanom = trueanom
         self.angmom = 0
         
+        self.position = position
+        self.velocity = velocity
+        self.G = G
+        self.totalMass = totalMass
+        
     def __str__(self):
         s= 'a= %f \ne= %f \ni= %f \nlongascend= %f \nargper= %f \ntrueanom= %f \n ' % (self.a, self.e, self.i, self.longascend, self.argper, self.trueanom)
         return s
+    
+    def clone(self):
+        return orbitalElements(self.a,self.e,self.i,self.longascend,self.argper,self.trueanom, self.position,self.velocity, self.G, self.totalMass)
 
-    def calcOrbitFromVector(self,position, velocity, G, totalmass):
+    def calcOrbitFromVector(self):
         """Takes input state vectors and calculates orbits"""
-        
+        tiny = 1.0e-10
         # Calculate orbital angular momentum
 
-        angmomvec = position.cross(velocity)
+        angmomvec = self.position.cross(self.velocity)
         self.angmom = angmomvec.mag()
         
         # Calculate Eccentricity Vector
         
-        gravparam = G * totalmass 
-        magpos = position.mag() 
-        magvel = velocity.mag() 
-        vdotr = velocity.dot(position) 
+        gravparam = self.G * self.totalMass 
+        magpos = self.position.mag() 
+        magvel = self.velocity.mag() 
+        vdotr = self.velocity.dot(self.position) 
         
         if (magpos == 0.0):
             eccentricityVector = Vector3D(0.0,0.0,0.0) 
         else:
-            eccentricityVector = position.scalarmult(magvel*magvel).subtract(velocity.scalarmult(vdotr))
-            eccentricityVector = eccentricityVector.scalarmult(1.0/gravparam).subtract(position.unitVector())
+            eccentricityVector = self.position.scalarmult(magvel*magvel).subtract(self.velocity.scalarmult(vdotr))
+            eccentricityVector = eccentricityVector.scalarmult(1.0/gravparam).subtract(self.position.unitVector())
 
         self.e = eccentricityVector.mag() 
         
         # Calculate Semi-latus rectum
         
-        semilat = self.angmom*self.angmom/(gravparam)
+        self.semilat = self.angmom*self.angmom/(gravparam)
+        print "semilat::", self.semilat
+        print "Angular Momentum:: ",angmomvec
+        print "Eccentricity Vector::", eccentricityVector
         
         # Semimajor axis
-        self.a = semilat/(1.0-self.e*self.e)
-        
+        try:
+            self.a = self.semilat/(1.0-self.e*self.e)
+            self.rper = self.a*(1.0-self.e)
+        except ZeroDivisionError: # For parabolic orbits
+            self.a = np.inf
+            self.rper = self.semilat
+            
         # Inclination
 
         if (self.angmom > 0.0):
@@ -64,144 +81,173 @@ class orbitalElements(object):
             self.i = 0.0 
             
 
-        #Calculate Longitude of the Ascending Node
-
+        # Two primary cases - inclined and non-inclined orbits
+        
+        # Do non-inclined orbits first
         nplane = Vector3D(0.0,0.0,0.0)
-        if (self.i == 0.0):
-            self.longascend = 0.0 
-
-            nplane.x = self.angmom 
-            nplane.y = 0.0
-            nplane.z = 0.0 
-            nscalar = nplane.mag() 
-
-    
-        else:
+        if(self.i>tiny):
+            
+            # Longitude of the ascending node
             nplane.x = -angmomvec.z 
             nplane.y = angmomvec.y 
             nplane.z = 0.0 
-
-            nscalar = nplane.mag() 
-            self.longascend = np.arccos(nplane.x / nscalar) 
+            nplane = nplane.unitVector()
+            
+            self.longascend = np.arccos(nplane.x) 
 
             if (nplane.y < 0.0):
                 self.longascend = twopi - self.longascend 
+                
+            if(self.e>tiny):
+                print self.e
+                # Argument of Periapsis
+                edotn = eccentricityVector.dot(nplane) 
+                edotn = edotn /self.e 
 
-        # Calculate true anomaly
+                self.argper = np.arccos(edotn) 
+                if (eccentricityVector.z < 0.0): self.argper = 2.0 * pi - self.argper 
+                
+                # True Anomaly
+                edotR = eccentricityVector.dot(self.position) 
+                edotR = edotR / (magpos * self.e) 
 
-        magpos = position.mag() 
+                rdotV = self.velocity.dot(self.position) 
 
-        # If orbit circular, no inclination, then use the position vector itself
+                self.trueanom = np.arccos(edotR) 
 
-        if (self.e == 0.0 and self.i == 0.0):
-            self.trueanom = np.arccos(position.x / magpos) 
-            if (velocity.x < 0.0):
-                self.trueanom = twopi - self.trueanom 
+                if (rdotV < 0.0):
+                    self.trueanom = twopi - self.trueanom 
+            # If orbits are circular...
+            else:
+                self.argper = 0.0
+                
+                ndotR = nplane.dot(self.position.unitVector()) 
+                ndotV = nplane.dot(self.velocity.unitVector()) 
 
-        # If orbit circular and inclination non-zero, then use the orbital plane vector
-        elif (self.e == 0.0):
-     
-            ndotR = nplane.dot(position) 
-            ndotR = ndotR / (magpos * nscalar) 
+                self.trueanom = np.arccos(ndotR) 
 
-            ndotV = nplane.dot(velocity) 
-
-            self.trueanom = np.arccos(ndotR) 
-
-            if (ndotV > 0.0):
-                self.trueanom = twopi - self.trueanom 
-         
-     
-        # For non-circular orbits use the eccentricity vector
+                if (ndotV > tiny):
+                    self.trueanom = twopi - self.trueanom 
+                
+                    
+        # If orbit has zero-inclination..        
         else:
-            edotR = eccentricityVector.dot(position) 
-            edotR = edotR / (magpos * self.e) 
-
-            rdotV = velocity.dot(position) 
-
-            self.trueanom = np.arccos(edotR) 
-
-            if (rdotV < 0.0):
-                self.trueanom = twopi - self.trueanom 
-
-        # Finally, calculate the longitude of periapsis - first calculate the argument of periapsis
-
-        if (self.e != 0.0):
-            edotn = eccentricityVector.dot(nplane) 
-            edotn = edotn / (nscalar * self.e) 
-
-            self.argper = np.arccos(edotn) 
-
-            if (eccentricityVector.z < 0.0): self.argper = 2.0 * pi - self.argper 
-
-        else:
-            self.argper = 0.0         
+            print "Zero inclination ", self.i
+            self.longascend = 0.0
+                
+            # non-circular orbits
+            if(self.e>tiny):
+                
+                # Argument of Periapsis 
+                self.argper = np.arctan2(eccentricityVector.y,eccentricityVector.x)
+                print self.argper
+                if(self.argper<0.0):
+                    self.argper +=twopi
+                print self.argper
+                if(angmomvec.z <0.0):
+                    self.argper = twopi - self.argper
+                    
+                # True Anomaly
+                edotR = eccentricityVector.dot(self.position) 
+                edotR = edotR / (magpos * self.e) 
+                print "edotR", edotR, magpos, self.e
+                rdotV = self.velocity.dot(self.position) 
+                print "rdotV", rdotV
+                self.trueanom = np.arccos(edotR) 
+                print "true:",self.trueanom
+                if (rdotV < 0.0):
+                    self.trueanom = twopi - self.trueanom 
+                print "true:", self.trueanom
+            # If orbits are circular
+            else:
+                # Argument of Periapsis
+                self.argper = 0.0
+                # True Anomaly
+                self.trueanom = np.arccos(self.position.x / magpos) 
+                if (self.velocity.x > tiny):
+                    self.trueanom = twopi - self.trueanom
+                print "ARGH" 
+            
     
-    def calcVectorFromOrbit(self, G, totalmass):
+    def calcVectorFromOrbit(self):
         """Returns position and velocity vectors from orbital calculations"""
         # calculate distance from CoM using semimajor axis, eccentricity and true anomaly
 
-        magpos = self.a * (1.0 - self.e * self.e) / (1.0+ self.e * np.arccos(self.trueanom)) 
+        magpos = self.semilat / (1.0+ self.e * np.cos(self.trueanom)) 
 
-        position = Vector3D(0.0,0.0,0.0)
-        velocity = Vector3D(0.0,0.0,0.0)
-        # Calculate position vector in orbital plane
+        self.position = Vector3D(0.0,0.0,0.0)
+        self.velocity = Vector3D(0.0,0.0,0.0)
+        
+        # Calculate self.position vector in orbital plane
+        self.position.x = magpos * np.cos(self.trueanom) 
+        self.position.y = magpos * np.sin(self.trueanom) 
+        self.position.z = 0.0 
 
-        position.x = magpos * np.cos(self.trueanom) 
-        position.y = magpos * np.sin(self.trueanom) 
-        position.z = 0.0 
+        # Calculate self.velocity vector in orbital plane */
+        gravparam = self.G * self.totalMass 
 
-        # Calculate velocity vector in orbital plane */
-        semiLatusRectum = abs(self.a * (1.0 - self.e * self.e)) 
-        gravparam = G * totalmass 
-
-        if (semiLatusRectum > 0.0 or semiLatusRectum<0.0):
-            magvel = np.sqrt(gravparam / semiLatusRectum) 
-        else:
-            magvel = 0.0 
-
-        velocity.x = -magvel * np.sin(self.trueanom) 
-        velocity.y = magvel * (np.cos(self.trueanom) + self.e) 
-        velocity.z = 0.0 
+        try:
+            magvel = np.sqrt(gravparam/self.semilat)
+        except ZeroDivisionError:
+            magvel = np.sqrt(2.0*gravparam/magpos)
+            
+        self.velocity.x = -magvel * np.sin(self.trueanom) 
+        self.velocity.y = magvel * (np.cos(self.trueanom) + self.e) 
+        self.velocity.z = 0.0 
 
         # Begin rotations:
         # Firstly, Rotation around z axis by -self.argper */
 
-        if(self.argper!=0.0):
-            position.rotateZ(-1 * self.argper) 
-            velocity.rotateZ(-1 * self.argper) 
+        if(self.argper>0.0):
+            self.position.rotateZ(self.argper) 
+            self.velocity.rotateZ(self.argper) 
      
         # Secondly, Rotate around x by -inclination */
 
-        if(self.i !=0.0):
-            position.rotateX(-1 * self.i) 
-            velocity.rotateX(-1 * self.i) 
+        if(self.i >0.0):
+            self.position.rotateX(self.i) 
+            self.velocity.rotateX(self.i) 
      
         # Lastly, Rotate around z by self.longascend */
 
-        if(self.longascend !=0.0):
-            position.rotateZ(-1 * self.longascend) 
-            velocity.rotateZ(-1 * self.longascend) 
+        if(self.longascend >0.0):
+            self.position.rotateZ(self.longascend) 
+            self.velocity.rotateZ(self.longascend) 
             
-    def calcOrbitTrack(self, G, totalmass, npoints):
+            
+    def calcOrbitTrack(self, npoints):
         '''Given an input body's orbital parameters, 
         calculates x and y coordinates for
         its orbit over N points'''
+        
+        
+        orbit = self.clone()
+        orbit.calcOrbitFromVector()
         
         if(self.e <=1.0):
             nu = np.linspace(0,2.0*np.pi, num=npoints)
         else:
             nu = np.linspace(-np.arccos(1.0/self.e), np.arccos(1.0/self.e), num=npoints)                
     
-        semilat = self.angmom*self.angmom/(G*totalmass)
-    
-        r = semilat/(1.0+self.e*np.cos(nu))
-    
+        x = np.zeros(npoints)
+        y = np.zeros(npoints)
+        z = np.zeros(npoints)
+        
+        for i in range(npoints):
+            orbit.trueanom = nu[i]
+            orbit.calcVectorFromOrbit()
+            x[i] = orbit.position.x
+            y[i] = orbit.position.y
+            z[i] = orbit.position.z
+        
+        #r = self.semilat/(1.0+self.e*np.cos(nu))
+        #print "semilat: ",self.semilat
+        
         # Generate 3 numpy arrays based on this orbital information
             
-        x = r*(np.cos(self.longascend)*np.cos(self.argper+nu) - np.sin(self.longascend)*np.sin(self.argper+nu)*np.cos(self.i))
-        y = r*(np.sin(self.longascend)*np.cos(self.argper+nu) - np.cos(self.longascend)*np.sin(self.argper+nu)*np.cos(self.i))
-        z = r*(np.sin(self.argper+nu)* np.sin(self.i))
+        #x = r*(np.cos(self.longascend)*np.cos(self.argper+nu) - np.sin(self.longascend)*np.sin(self.argper+nu)*np.cos(self.i))
+        #y = r*(np.sin(self.longascend)*np.cos(self.argper+nu) - np.cos(self.longascend)*np.sin(self.argper+nu)*np.cos(self.i))
+        #z = r*(np.sin(self.argper+nu)* np.sin(self.i))
     
         return x,y,z    
      
