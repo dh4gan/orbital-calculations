@@ -7,7 +7,7 @@ G = 1.0
 totalmass = 1.0
 npoints = 100
 
-positionangle = 45.0*pi/180.0
+positionangle = 200.0*pi/180.0
 velangle = -90.0*pi/180.0
 
 magpos = 1.0

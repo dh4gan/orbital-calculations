@@ -110,7 +110,7 @@ class orbitalElements(object):
                 # True Anomaly
                 edotR = eccentricityVector.dot(self.position) 
                 edotR = edotR / (magpos * self.e) 
-
+                print "edotR", edotR, magpos, self.e
                 rdotV = self.velocity.dot(self.position) 
 
                 self.trueanom = np.arccos(edotR) 
