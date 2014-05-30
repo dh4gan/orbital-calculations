@@ -31,6 +31,7 @@ class Vector3D(object):
         """ Multiplies vector by scalar"""
         return Vector3D(num*self.x, num*self.y,num*self.z)
 
+    
 # Magnitude of the Vector
     
     def mag(self):
@@ -38,6 +39,10 @@ class Vector3D(object):
         mag = math.sqrt(self.x*self.x + self.y*self.y + self.z*self.z)
         return mag
 
+    def unitVector(self):
+        """Returns the unit vector"""
+        return self.scalarmult(1.0/self.mag())
+    
 # Scalar Product
             
     def dot(self,other):
@@ -49,14 +54,14 @@ class Vector3D(object):
         return dotproduct
     
 # Vector Product
-    def crossProduct(self,other):
+    def cross(self,other):
         """Calculates cross product (self x other)"""
 
-        oldvec = self.clone()
-    
-        self.x = oldvec.y * other.z - oldvec.z * other.y;
-        self.y = oldvec.z * other.x - oldvec.x * other.z;
-        self.z = oldvec.x * other.y - oldvec.y * other.x;
+        cross = Vector3D(0.0,0.0,0.0)
+        cross.x = self.y * other.z - self.z * other.y;
+        cross.y = self.z * other.x - self.x * other.z;
+        cross.z = self.x * other.y - self.y * other.x;
+        return cross
 
     
 # Rotate around the Z axis
