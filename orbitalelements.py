@@ -7,6 +7,7 @@ import numpy as np
 
 pi = 3.141592654
 twopi = 2.0*pi
+tiny = 1.0e-10
 
 class orbitalElements(object):
     """Set of orbital elements"""
@@ -26,15 +27,15 @@ class orbitalElements(object):
         self.totalMass = totalMass
         
     def __str__(self):
-        s= 'a= %f \ne= %f \ni= %f \nlongascend= %f \nargper= %f \ntrueanom= %f \n ' % (self.a, self.e, self.i, self.longascend, self.argper, self.trueanom)
+        s= 'a= %e \ne= %e \ni= %e \nlongascend= %e \nargper= %e \ntrueanom= %e \n ' % (self.a, self.e, self.i, self.longascend, self.argper, self.trueanom)
         return s
     
     def clone(self):
         return orbitalElements(self.a,self.e,self.i,self.longascend,self.argper,self.trueanom, self.position,self.velocity, self.G, self.totalMass)
 
     def calcOrbitFromVector(self):
-        """Takes input state vectors and calculates orbits"""
-        tiny = 1.0e-10
+        """Takes input state vectors and calculates orbital elements"""
+        
         # Calculate orbital angular momentum
 
         angmomvec = self.position.cross(self.velocity)
@@ -62,13 +63,19 @@ class orbitalElements(object):
         print "Angular Momentum:: ",angmomvec
         print "Eccentricity Vector::", eccentricityVector
         
+        etot = 0.5*magvel*magvel - gravparam/magpos
+        
+        print "Total energy is ", etot
+        
+        
+        
         # Semimajor axis
         try:
             self.a = self.semilat/(1.0-self.e*self.e)
             self.rper = self.a*(1.0-self.e)
         except ZeroDivisionError: # For parabolic orbits
             self.a = np.inf
-            self.rper = self.semilat
+            self.rper = self.semilat/2.0
             
         # Inclination
 
@@ -81,93 +88,56 @@ class orbitalElements(object):
             self.i = 0.0 
             
 
-        # Two primary cases - inclined and non-inclined orbits
+        # Longitude of the ascending node
         
-        # Do non-inclined orbits first
-        nplane = Vector3D(0.0,0.0,0.0)
-        if(self.i>tiny):
+        self.longascend = np.arctan2(-angmomvec.y, angmomvec.x)
+        print self.longascend
+        if(self.longascend < -tiny):
+            self.longascend = self.longascend + twopi
+
+        print self.longascend, np.cos(self.longascend), np.sin(self.longascend)
+        nplane = Vector3D(np.cos(self.longascend), np.sin(self.longascend), 0.0)
+
+        print "Node Vector::", nplane
+      
             
-            # Longitude of the ascending node
-            nplane.x = -angmomvec.z 
-            nplane.y = angmomvec.y 
-            nplane.z = 0.0 
-            nplane = nplane.unitVector()
-            
-            self.longascend = np.arccos(nplane.x) 
+        # True anomaly 
+        if(self.e>tiny):
+            edotR = eccentricityVector.dot(self.position) 
+            edotR = edotR / (magpos * self.e) 
+            rdotV = self.velocity.dot(self.position) 
+            print "edotR, rdotV", edotR, rdotV
 
-            if (nplane.y < 0.0):
-                self.longascend = twopi - self.longascend 
-                
-            if(self.e>tiny):
-                print self.e
-                # Argument of Periapsis
-                edotn = eccentricityVector.dot(nplane) 
-                edotn = edotn /self.e 
+            self.trueanom = np.arccos(edotR) 
 
-                self.argper = np.arccos(edotn) 
-                if (eccentricityVector.z < 0.0): self.argper = 2.0 * pi - self.argper 
-                
-                # True Anomaly
-                edotR = eccentricityVector.dot(self.position) 
-                edotR = edotR / (magpos * self.e) 
-                print "edotR", edotR, magpos, self.e
-                rdotV = self.velocity.dot(self.position) 
-
-                self.trueanom = np.arccos(edotR) 
-
-                if (rdotV < 0.0):
-                    self.trueanom = twopi - self.trueanom 
-            # If orbits are circular...
-            else:
-                self.argper = 0.0
-                
-                ndotR = nplane.dot(self.position.unitVector()) 
-                ndotV = nplane.dot(self.velocity.unitVector()) 
-
-                self.trueanom = np.arccos(ndotR) 
-
-                if (ndotV > tiny):
-                    self.trueanom = twopi - self.trueanom 
-                
+            if (rdotV < tiny):
+                self.trueanom = twopi - self.trueanom 
                     
-        # If orbit has zero-inclination..        
         else:
-            print "Zero inclination ", self.i
-            self.longascend = 0.0
-                
-            # non-circular orbits
-            if(self.e>tiny):
-                
-                # Argument of Periapsis 
-                self.argper = np.arctan2(eccentricityVector.y,eccentricityVector.x)
-                print self.argper
-                if(self.argper<0.0):
-                    self.argper +=twopi
-                print self.argper
-                if(angmomvec.z <0.0):
-                    self.argper = twopi - self.argper
-                    
-                # True Anomaly
-                edotR = eccentricityVector.dot(self.position) 
-                edotR = edotR / (magpos * self.e) 
-                print "edotR", edotR, magpos, self.e
-                rdotV = self.velocity.dot(self.position) 
-                print "rdotV", rdotV
-                self.trueanom = np.arccos(edotR) 
-                print "true:",self.trueanom
-                if (rdotV < 0.0):
-                    self.trueanom = twopi - self.trueanom 
-                print "true:", self.trueanom
-            # If orbits are circular
-            else:
-                # Argument of Periapsis
-                self.argper = 0.0
-                # True Anomaly
-                self.trueanom = np.arccos(self.position.x / magpos) 
-                if (self.velocity.x > tiny):
-                    self.trueanom = twopi - self.trueanom
-                print "ARGH" 
+            ndotR = nplane.dot(self.position.unitVector()) 
+            ndotV = nplane.dot(self.velocity.unitVector()) 
+
+            self.trueanom = np.arccos(ndotR) 
+
+            if (ndotV > tiny):
+                self.trueanom = twopi - self.trueanom 
+
+        # Argument of periapsis 
+        
+        
+        average_v = np.sqrt(gravparam/magpos)
+        print "Velocity vs average:", magvel, average_v
+        
+        if(self.e>tiny):
+            ndote = nplane.dot(eccentricityVector.unitVector())
+            self.argper = np.arccos(ndote)
             
+            if(eccentricityVector.z<0.0):
+                self.argper =twopi - self.argper
+
+        else:
+            self.argper = 0.0
+
     
     def calcVectorFromOrbit(self):
         """Returns position and velocity vectors from orbital calculations"""
@@ -198,21 +168,21 @@ class orbitalElements(object):
         # Begin rotations:
         # Firstly, Rotation around z axis by -self.argper */
 
-        if(self.argper>0.0):
-            self.position.rotateZ(self.argper) 
-            self.velocity.rotateZ(self.argper) 
+        if(self.argper>tiny):
+            self.position.rotateZ(-self.argper) 
+            self.velocity.rotateZ(-self.argper) 
      
         # Secondly, Rotate around x by -inclination */
 
-        if(self.i >0.0):
-            self.position.rotateX(self.i) 
-            self.velocity.rotateX(self.i) 
+        if(self.i >tiny):
+            self.position.rotateX(-self.i) 
+            self.velocity.rotateX(-self.i) 
      
         # Lastly, Rotate around z by self.longascend */
 
-        if(self.longascend >0.0):
-            self.position.rotateZ(self.longascend) 
-            self.velocity.rotateZ(self.longascend) 
+        if(self.longascend >tiny):
+            self.position.rotateZ(-self.longascend) 
+            self.velocity.rotateZ(-self.longascend) 
             
             
     def calcOrbitTrack(self, npoints):
@@ -222,10 +192,11 @@ class orbitalElements(object):
         
         
         orbit = self.clone()
-        orbit.calcOrbitFromVector()
-        
-        if(self.e <=1.0):
+ #       orbit.calcOrbitFromVector()
+        orbit.semilat = orbit.a*(1.0-orbit.e*orbit.e)
+        if(orbit.e <1.0):
             nu = np.linspace(0,2.0*np.pi, num=npoints)
+
         else:
             nu = np.linspace(-np.arccos(1.0/self.e), np.arccos(1.0/self.e), num=npoints)                
     

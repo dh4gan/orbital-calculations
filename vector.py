@@ -10,7 +10,7 @@ class Vector3D(object):
         self.z = z
 
     def __str__(self):
-        s= '3D Vector ( %f, %f, %f)' % (self.x, self.y, self.z)
+        s= '3D Vector ( %e, %e, %e)' % (self.x, self.y, self.z)
         return s
 
     def clone(self):
