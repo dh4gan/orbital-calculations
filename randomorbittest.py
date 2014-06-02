@@ -6,12 +6,12 @@ from numpy import amin, amax, sin,cos, pi, random
 G = 1.0
 totalmass = 1.0
 npoints = 1000
-ntries = 20
+ntries = 200
 
 magpos = 1.0
 magvel = 0.7
 
-
+fail = 0
 
 for i in range(ntries):
 
@@ -45,6 +45,7 @@ for i in range(ntries):
     
     if position.subtract(orbit.position).mag() >1.0e-4:
         print "Position FAIL"
+        fail +=1
     if velocity.subtract(orbit.velocity).mag() >1.0e-4:
         print "Velocity FAIL"
         
@@ -84,5 +85,9 @@ for i in range(ntries):
     planet = ax.scatter(position.x, position.y, s=50, color='green')
     
     star = ax.scatter(0.0,0.0, s=100, color='yellow')
-    plt.show()
+    #plt.show()
+    
+#plt.show()
+
+print "NUMBER OF FAILS ", fail
     

@@ -124,15 +124,18 @@ class orbitalElements(object):
 
         # Argument of periapsis 
         
-        
         average_v = np.sqrt(gravparam/magpos)
         print "Velocity vs average:", magvel, average_v
         
         if(self.e>tiny):
+            ncrosse = nplane.cross(eccentricityVector.unitVector())
             ndote = nplane.dot(eccentricityVector.unitVector())
             self.argper = np.arccos(ndote)
             
-            if(eccentricityVector.z<0.0):
+            ncrosse = ncrosse.dot(angmomvec)
+            print ncrosse
+            if(ncrosse>0.0):
+                print "FLIPPED"
                 self.argper =twopi - self.argper
 
         else:
