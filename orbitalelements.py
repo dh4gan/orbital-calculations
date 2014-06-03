@@ -27,7 +27,7 @@ class orbitalElements(object):
         self.totalMass = totalMass
         
     def __str__(self):
-        s= 'a= %e \ne= %e \ni= %e \nlongascend= %e \nargper= %e \ntrueanom= %e \n ' % (self.a, self.e, self.i, self.longascend, self.argper, self.trueanom)
+        s= 'a= %e \ne= %e \ni= %e \nlongascend= %e \nargper= %e \ntrueanom= %e ' % (self.a, self.e, self.i, self.longascend, self.argper, self.trueanom)
         return s
     
     def clone(self):
@@ -40,8 +40,7 @@ class orbitalElements(object):
 
         angmomvec = self.position.cross(self.velocity)
         self.angmom = angmomvec.mag()
-        
-        print "h::", angmomvec
+ 
         # Calculate Eccentricity Vector
         
         gravparam = self.G * self.totalMass 
@@ -57,13 +56,11 @@ class orbitalElements(object):
 
         self.e = eccentricityVector.mag() 
         
-        
         # Calculate Semi-latus rectum
         
         self.semilat = self.angmom*self.angmom/(gravparam)
         
         etot = 0.5*magvel*magvel - gravparam/magpos
-        print "a from energy: ", -gravparam/(2.0*etot)
         
         # Semimajor axis
         try:
@@ -76,10 +73,7 @@ class orbitalElements(object):
         # Inclination
 
         if (self.angmom > 0.0):
-            self.i = np.arccos(angmomvec.z/self.angmom)
-
-            #if(angmomvec.z < 0.0):
-            #    self.i = twopi - self.i    
+            self.i = np.arccos(angmomvec.z/self.angmom)   
         else:
             self.i = 0.0 
             
@@ -88,16 +82,13 @@ class orbitalElements(object):
         zhat = Vector3D(0.0,0.0,1.0)
         
         nplane = zhat.cross(angmomvec)
+        
         if(nplane.mag() < tiny):
             self.longascend = 0.0
         else:
             self.longascend = np.arccos(nplane.x/nplane.mag())
             if(nplane.y<0.0):
                 self.longascend= twopi - self.longascend
-
-        
-        print "n::",nplane
-        print "e::",eccentricityVector
         
         # True anomaly 
         if(self.e>tiny):
@@ -126,29 +117,15 @@ class orbitalElements(object):
 
         # Argument of periapsis 
         
-        average_v = np.sqrt(gravparam/magpos)
         
         if(self.e>tiny):     
             if(nplane.mag()>tiny):       
-                ncrosse = nplane.cross(eccentricityVector)
-                #print "(n x e)::",ncrosse
-                #print "h(e.z)::", angmomvec.scalarmult(eccentricityVector.z), ncrosse.subtract(angmomvec.scalarmult(eccentricityVector.z)).mag()
                 ndote = nplane.unitVector().dot(eccentricityVector.unitVector())
                 self.argper = np.arccos(ndote)
-                ncrossecrossh = ncrosse.cross(angmomvec)
-            
-                ncrossedoth = ncrosse.dot(angmomvec)
-            
-                #print "(n x e).h::",ncrossedoth, angmomvec.scalarmult(eccentricityVector.z).dot(angmomvec)
-                #print "|(n x e) xh|::", ncrossecrossh.mag()
-
-                print "argper_raw", self.argper, eccentricityVector.z
                 if(eccentricityVector.z<0.0):
                     self.argper =twopi - self.argper
             else:
-                print "Equatorial"
                 self.argper = np.arctan2(eccentricityVector.y, eccentricityVector.x)
-                print "argper_raw", self.argper
                 if(self.argper<0.0):
                     self.argper += 2.0*pi
                 if(angmomvec.z>0.0):
