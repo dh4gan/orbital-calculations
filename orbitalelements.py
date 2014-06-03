@@ -41,6 +41,7 @@ class orbitalElements(object):
         angmomvec = self.position.cross(self.velocity)
         self.angmom = angmomvec.mag()
         
+        print "Angular Momentum::", angmomvec
         # Calculate Eccentricity Vector
         
         gravparam = self.G * self.totalMass 
@@ -56,6 +57,7 @@ class orbitalElements(object):
 
         self.e = eccentricityVector.mag() 
         
+        print "Eccentricity Vector::",eccentricityVector
         # Calculate Semi-latus rectum
         
         self.semilat = self.angmom*self.angmom/(gravparam)
@@ -80,16 +82,21 @@ class orbitalElements(object):
         else:
             self.i = 0.0 
             
-
         # Longitude of the ascending node
         
         self.longascend = np.arctan2(-angmomvec.y, angmomvec.x)
-
+            
+        print "longascend raw::",self.longascend, np.tan(self.longascend),self.i
         if(self.longascend < -tiny):
             self.longascend = self.longascend + twopi
 
+        if(self.i<tiny): self.longascend =0.0
         nplane = Vector3D(np.cos(self.longascend), np.sin(self.longascend), 0.0)
             
+        if(self.i>tiny):
+            nplane.rotateX(-self.i)
+        
+        print "Orbit Plane Vector::",nplane
         # True anomaly 
         if(self.e>tiny):
             edotR = eccentricityVector.dot(self.position) 
@@ -113,16 +120,21 @@ class orbitalElements(object):
         # Argument of periapsis 
         
         average_v = np.sqrt(gravparam/magpos)
-
         
         if(self.e>tiny):
             ncrosse = nplane.cross(eccentricityVector.unitVector())
+            print "n x e::",ncrosse
+            print "angmomunit:: ", angmomvec.unitVector()
             ndote = nplane.dot(eccentricityVector.unitVector())
             self.argper = np.arccos(ndote)
-            ncrosse = ncrosse.dot(angmomvec)
+            ncrossecrossh = ncrosse.cross(angmomvec.unitVector())
+            
+            ncrosse = ncrosse.dot(angmomvec.unitVector())
+            
+            print "(n x e).h::",ncrosse
+            print "(n x e)xh ::", ncrossecrossh
 
             if(ncrosse>0.0):
-
                 self.argper =twopi - self.argper
 
         else:
