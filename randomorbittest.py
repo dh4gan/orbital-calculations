@@ -9,7 +9,7 @@ npoints = 1000
 ntries = 200
 
 magpos = 1.0
-magvel = 0.7
+magvel = 1.0
 
 fail = 0
 
@@ -48,7 +48,7 @@ for i in range(ntries):
         fail +=1
     if velocity.subtract(orbit.velocity).mag() >1.0e-4:
         print "Velocity FAIL"
-        
+    print "--"
     
     xmin = amin(xorb)
     xmin = xmin - 0.1*abs(xmin)
@@ -66,25 +66,25 @@ for i in range(ntries):
     if(ymin > position.y): ymin = position.y - 1.0
     if(ymax < position.y): ymax = position.y + 1.0
     
-    fig1 = plt.figure()
-    ax = fig1.add_subplot(111)
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
+    #fig1 = plt.figure()
+    #ax = fig1.add_subplot(111)
+    #ax.set_xlabel('x')
+    #ax.set_ylabel('y')
   
-    ax.set_xlim(xmin,xmax)
-    ax.set_ylim(ymin,ymax)
+    #ax.set_xlim(xmin,xmax)
+    #ax.set_ylim(ymin,ymax)
     
     #Plot orbital path
-    orbitline = ax.plot(xorb,yorb)
-    orbitline2 = ax.plot(xorb2,yorb2, ls='dashed')
+    #orbitline = ax.plot(xorb,yorb)
+    #orbitline2 = ax.plot(xorb2,yorb2, ls='dashed')
     #Plot a vector showing the velocity magnitude and direction
-    velocityarrow = ax.quiver(position.x, position.y, velocity.x,velocity.y, color='black')
+    #velocityarrow = ax.quiver(position.x, position.y, velocity.x,velocity.y, color='black')
     
     # Plot planet location
-    planettry = ax.scatter(orbit.position.x,orbit.position.y, s=50, edgecolor='red', facecolor = 'none')
-    planet = ax.scatter(position.x, position.y, s=50, color='green')
+    #planettry = ax.scatter(orbit.position.x,orbit.position.y, s=50, edgecolor='red', facecolor = 'none')
+    #planet = ax.scatter(position.x, position.y, s=50, color='green')
     
-    star = ax.scatter(0.0,0.0, s=100, color='yellow')
+    #star = ax.scatter(0.0,0.0, s=100, color='yellow')
     #plt.show()
     
 #plt.show()

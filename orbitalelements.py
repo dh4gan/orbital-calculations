@@ -59,15 +59,8 @@ class orbitalElements(object):
         # Calculate Semi-latus rectum
         
         self.semilat = self.angmom*self.angmom/(gravparam)
-        print "semilat::", self.semilat
-        print "Angular Momentum:: ",angmomvec
-        print "Eccentricity Vector::", eccentricityVector
         
         etot = 0.5*magvel*magvel - gravparam/magpos
-        
-        print "Total energy is ", etot
-        
-        
         
         # Semimajor axis
         try:
@@ -91,23 +84,18 @@ class orbitalElements(object):
         # Longitude of the ascending node
         
         self.longascend = np.arctan2(-angmomvec.y, angmomvec.x)
-        print self.longascend
+
         if(self.longascend < -tiny):
             self.longascend = self.longascend + twopi
 
-        print self.longascend, np.cos(self.longascend), np.sin(self.longascend)
         nplane = Vector3D(np.cos(self.longascend), np.sin(self.longascend), 0.0)
-
-        print "Node Vector::", nplane
-      
             
         # True anomaly 
         if(self.e>tiny):
             edotR = eccentricityVector.dot(self.position) 
             edotR = edotR / (magpos * self.e) 
             rdotV = self.velocity.dot(self.position) 
-            print "edotR, rdotV", edotR, rdotV
-
+            
             self.trueanom = np.arccos(edotR) 
 
             if (rdotV < tiny):
@@ -125,17 +113,16 @@ class orbitalElements(object):
         # Argument of periapsis 
         
         average_v = np.sqrt(gravparam/magpos)
-        print "Velocity vs average:", magvel, average_v
+
         
         if(self.e>tiny):
             ncrosse = nplane.cross(eccentricityVector.unitVector())
             ndote = nplane.dot(eccentricityVector.unitVector())
             self.argper = np.arccos(ndote)
-            
             ncrosse = ncrosse.dot(angmomvec)
-            print ncrosse
+
             if(ncrosse>0.0):
-                print "FLIPPED"
+
                 self.argper =twopi - self.argper
 
         else:
