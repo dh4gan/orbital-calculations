@@ -41,7 +41,7 @@ class orbitalElements(object):
         angmomvec = self.position.cross(self.velocity)
         self.angmom = angmomvec.mag()
         
-        print "Angular Momentum::", angmomvec
+        print "h::", angmomvec
         # Calculate Eccentricity Vector
         
         gravparam = self.G * self.totalMass 
@@ -57,12 +57,13 @@ class orbitalElements(object):
 
         self.e = eccentricityVector.mag() 
         
-        print "Eccentricity Vector::",eccentricityVector
+        
         # Calculate Semi-latus rectum
         
         self.semilat = self.angmom*self.angmom/(gravparam)
         
         etot = 0.5*magvel*magvel - gravparam/magpos
+        print "a from energy: ", -gravparam/(2.0*etot)
         
         # Semimajor axis
         try:
@@ -77,26 +78,27 @@ class orbitalElements(object):
         if (self.angmom > 0.0):
             self.i = np.arccos(angmomvec.z/self.angmom)
 
-            if(angmomvec.z < 0.0):
-                self.i = twopi - self.i    
+            #if(angmomvec.z < 0.0):
+            #    self.i = twopi - self.i    
         else:
             self.i = 0.0 
             
         # Longitude of the ascending node
         
-        self.longascend = np.arctan2(-angmomvec.y, angmomvec.x)
-            
-        print "longascend raw::",self.longascend, np.tan(self.longascend),self.i
-        if(self.longascend < -tiny):
-            self.longascend = self.longascend + twopi
-
-        if(self.i<tiny): self.longascend =0.0
-        nplane = Vector3D(np.cos(self.longascend), np.sin(self.longascend), 0.0)
-            
-        if(self.i>tiny):
-            nplane.rotateX(-self.i)
+        zhat = Vector3D(0.0,0.0,1.0)
         
-        print "Orbit Plane Vector::",nplane
+        nplane = zhat.cross(angmomvec)
+        if(nplane.mag() < tiny):
+            self.longascend = 0.0
+        else:
+            self.longascend = np.arccos(nplane.x/nplane.mag())
+            if(nplane.y<0.0):
+                self.longascend= twopi - self.longascend
+
+        
+        print "n::",nplane
+        print "e::",eccentricityVector
+        
         # True anomaly 
         if(self.e>tiny):
             edotR = eccentricityVector.dot(self.position) 
@@ -109,34 +111,48 @@ class orbitalElements(object):
                 self.trueanom = twopi - self.trueanom 
                     
         else:
-            ndotR = nplane.dot(self.position.unitVector()) 
-            ndotV = nplane.dot(self.velocity.unitVector()) 
+            if(nplane.mag()>tiny):
+                ndotR = nplane.unitVector().dot(self.position.unitVector()) 
+                ndotV = nplane.unitVector().dot(self.velocity.unitVector()) 
 
-            self.trueanom = np.arccos(ndotR) 
+                self.trueanom = np.arccos(ndotR) 
 
-            if (ndotV > tiny):
-                self.trueanom = twopi - self.trueanom 
+                if (ndotV > tiny):
+                    self.trueanom = twopi - self.trueanom 
+            else:
+                self.trueanom = np.arccos(self.position.x/magpos)
+                if(self.velocity.x>0.0):
+                    self.trueanom = 2.0*pi-self.trueanom
 
         # Argument of periapsis 
         
         average_v = np.sqrt(gravparam/magpos)
         
-        if(self.e>tiny):
-            ncrosse = nplane.cross(eccentricityVector.unitVector())
-            print "n x e::",ncrosse
-            print "angmomunit:: ", angmomvec.unitVector()
-            ndote = nplane.dot(eccentricityVector.unitVector())
-            self.argper = np.arccos(ndote)
-            ncrossecrossh = ncrosse.cross(angmomvec.unitVector())
+        if(self.e>tiny):     
+            if(nplane.mag()>tiny):       
+                ncrosse = nplane.cross(eccentricityVector)
+                #print "(n x e)::",ncrosse
+                #print "h(e.z)::", angmomvec.scalarmult(eccentricityVector.z), ncrosse.subtract(angmomvec.scalarmult(eccentricityVector.z)).mag()
+                ndote = nplane.unitVector().dot(eccentricityVector.unitVector())
+                self.argper = np.arccos(ndote)
+                ncrossecrossh = ncrosse.cross(angmomvec)
             
-            ncrosse = ncrosse.dot(angmomvec.unitVector())
+                ncrossedoth = ncrosse.dot(angmomvec)
             
-            print "(n x e).h::",ncrosse
-            print "(n x e)xh ::", ncrossecrossh
+                #print "(n x e).h::",ncrossedoth, angmomvec.scalarmult(eccentricityVector.z).dot(angmomvec)
+                #print "|(n x e) xh|::", ncrossecrossh.mag()
 
-            if(ncrosse>0.0):
-                self.argper =twopi - self.argper
-
+                print "argper_raw", self.argper, eccentricityVector.z
+                if(eccentricityVector.z<0.0):
+                    self.argper =twopi - self.argper
+            else:
+                print "Equatorial"
+                self.argper = np.arctan2(eccentricityVector.y, eccentricityVector.x)
+                print "argper_raw", self.argper
+                if(self.argper<0.0):
+                    self.argper += 2.0*pi
+                if(angmomvec.z>0.0):
+                    self.argper = 2.0*pi-self.argper
         else:
             self.argper = 0.0
 
@@ -171,20 +187,20 @@ class orbitalElements(object):
         # Firstly, Rotation around z axis by -self.argper */
 
         if(self.argper>tiny):
-            self.position.rotateZ(-self.argper) 
-            self.velocity.rotateZ(-self.argper) 
+            self.position.rotateZ(self.argper) 
+            self.velocity.rotateZ(self.argper) 
      
         # Secondly, Rotate around x by -inclination */
 
         if(self.i >tiny):
-            self.position.rotateX(-self.i) 
-            self.velocity.rotateX(-self.i) 
+            self.position.rotateX(self.i) 
+            self.velocity.rotateX(self.i) 
      
         # Lastly, Rotate around z by self.longascend */
 
         if(self.longascend >tiny):
-            self.position.rotateZ(-self.longascend) 
-            self.velocity.rotateZ(-self.longascend) 
+            self.position.rotateZ(self.longascend) 
+            self.velocity.rotateZ(self.longascend) 
             
             
     def calcOrbitTrack(self, npoints):

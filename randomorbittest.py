@@ -24,15 +24,12 @@ for i in range(ntries):
     #positionangle = pi/2.0
     
     veltheta = random.random()*pi
-    veltheta = pi/2.0
+    #veltheta = pi/2.0
     velangle = -2.0*pi + random.random()*4.0*pi
     #velangle = 0.0
     
     position = Vector3D(magpos*sin(postheta)*cos(positionangle), magpos*sin(postheta)*sin(positionangle),magpos*cos(postheta))
     velocity = Vector3D(magvel*sin(veltheta)*cos(velangle), magvel*sin(veltheta)*sin(velangle), magvel*cos(veltheta))
-    
-    #position = Vector3D(magpos*cos(positionangle), magpos*sin(positionangle),0.0)
-    #velocity = Vector3D(magvel*cos(velangle), magvel*sin(velangle), 0.0)
     
     orbit = orbitalElements(0.0,0.0,0.0,0.0,0.0,0.0, position,velocity, G, totalmass)
     orbit.calcOrbitFromVector()
@@ -40,9 +37,19 @@ for i in range(ntries):
     xorb,yorb,zorb = orbit.calcOrbitTrack(npoints)
     
     orbit2 = orbit.clone()
+    orbit3 = orbit.clone()
+    orbit4 = orbit.clone()
+  
     orbit2.argper = 2.0*pi - orbit2.argper
     
+    orbit3.longascend - 2.0*pi - orbit3.longascend
+    
+    orbit4.argper = 2.0*pi - orbit4.argper
+    orbit4.longascend - 2.0*pi - orbit4.longascend
+    
     xorb2,yorb2,zorb2 = orbit2.calcOrbitTrack(npoints)
+    xorb3,yorb3,zorb3 = orbit3.calcOrbitTrack(npoints)
+    xorb4,yorb4,zorb4 = orbit4.calcOrbitTrack(npoints)
     
     print "Orbit is \n", orbit
     
@@ -90,8 +97,10 @@ for i in range(ntries):
     ax.set_ylim(ymin,ymax)
     
     #Plot orbital path
-    orbitline = ax.plot(xorb,yorb,zorb)
-    orbitline2 = ax.plot(xorb2,yorb2,zorb2, ls='dashed')
+    orbitline = ax.plot(xorb,yorb,zorb, color= 'black')
+    orbitline2 = ax.plot(xorb2,yorb2,zorb2, color = 'red' ,ls='-', label = 'Flip argper')
+    orbitline3 = ax.plot(xorb3,yorb3,zorb3, color = 'green', ls='--', label = 'Flip longascend')
+    #orbitline4 = ax.plot(xorb4,yorb4,zorb4, color = 'blue', ls=':', label = 'Flip both')
     #orbitplane= ax.quiver(0.0,0.0,cos(orbit.longascend), sin(orbit.longascend),minlength = 5.0, color = 'blue')
     
     #orbitplane= ax.quiver(0.0,0.0,cos(orbit.argper), sin(orbit.argper),minlength = 5.0, color = 'red')
@@ -103,9 +112,10 @@ for i in range(ntries):
     planet = ax.scatter(position.x, position.y,position.z, s=50, color='green')
     
     star = ax.scatter(0.0,0.0, s=100, color='yellow')
-    plt.show()
+    ax.legend(loc='best')
+    #plt.show()
     
-plt.show()
+#plt.show()
 
 print "NUMBER OF FAILS ", fail
     
