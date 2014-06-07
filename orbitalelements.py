@@ -187,14 +187,12 @@ class orbitalElements(object):
         
         
         orbit = self.clone()
- #       orbit.calcOrbitFromVector()
         orbit.semilat = orbit.a*(1.0-orbit.e*orbit.e)
         if(orbit.e <1.0):
             nu = np.linspace(0,2.0*np.pi, num=npoints)
-
-        else:
-            nu = np.linspace(-np.arccos(1.0/self.e), np.arccos(1.0/self.e), num=npoints)                
-    
+        else:        
+            nu = np.linspace(self.trueanom - np.arccos(1.0/self.e), self.trueanom + np.arccos(1.0/self.e), num=npoints)                
+            
         x = np.zeros(npoints)
         y = np.zeros(npoints)
         z = np.zeros(npoints)
@@ -205,15 +203,6 @@ class orbitalElements(object):
             x[i] = orbit.position.x
             y[i] = orbit.position.y
             z[i] = orbit.position.z
-        
-        #r = self.semilat/(1.0+self.e*np.cos(nu))
-        #print "semilat: ",self.semilat
-        
-        # Generate 3 numpy arrays based on this orbital information
-            
-        #x = r*(np.cos(self.longascend)*np.cos(self.argper+nu) - np.sin(self.longascend)*np.sin(self.argper+nu)*np.cos(self.i))
-        #y = r*(np.sin(self.longascend)*np.cos(self.argper+nu) - np.cos(self.longascend)*np.sin(self.argper+nu)*np.cos(self.i))
-        #z = r*(np.sin(self.argper+nu)* np.sin(self.i))
     
         return x,y,z    
      
