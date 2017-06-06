@@ -10,7 +10,7 @@ npoints = 1000
 ntries = 500
 
 magpos = 1.0
-magvel = 2.0
+magvel = 0.4
 
 fail = 0
 

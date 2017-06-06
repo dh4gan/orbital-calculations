@@ -9,6 +9,12 @@ pi = 3.141592654
 twopi = 2.0*pi
 tiny = 1.0e-10
 
+# G in various unit systems
+Gsi = 6.67e-11
+Gcgs = 6.67e-8
+GmsolAUyr = 4.0*pi*pi
+GmsolAUday = GmsolAUyr/(365.25*365.25)
+
 class orbitalElements(object):
     """Set of orbital elements"""
     def __init__(self,a, e, i, longascend, argper, trueanom, position,velocity, G, totalMass):
@@ -138,6 +144,7 @@ class orbitalElements(object):
         """Returns position and velocity vectors from orbital calculations"""
         # calculate distance from CoM using semimajor axis, eccentricity and true anomaly
 
+        self.semilat = self.a*(1.0-self.e*self.e)
         magpos = self.semilat / (1.0+ self.e * np.cos(self.trueanom)) 
 
         self.position = Vector3D(0.0,0.0,0.0)
